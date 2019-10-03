@@ -54,7 +54,6 @@ func loadMessage(completion: @escaping (String) -> Void) {
     var firstMessage:String?
     var lastMessage:String?
     let timeoutMessage = "Unable to load message - Time out exceeded"
-    /*
     let operationQueueToFetchMessages = OperationQueue()
     operationQueueToFetchMessages.maxConcurrentOperationCount = 2
     let startOfOperation = CFAbsoluteTimeGetCurrent()
@@ -62,7 +61,6 @@ func loadMessage(completion: @escaping (String) -> Void) {
         fetchMessageOne { (messageOne) in
             firstMessage = messageOne
             let elapsedTime = elapsedTimeFromStartTime(startOfOperation: startOfOperation)
-            print(elapsedTime)
             if elapsedTime > 2.0 {
                 completionOnMainThreadWith(message: timeoutMessage, handler: completion)
             } else {
@@ -76,7 +74,6 @@ func loadMessage(completion: @escaping (String) -> Void) {
         fetchMessageTwo { (messageTwo) in
             lastMessage = messageTwo
             let elapsedTime = elapsedTimeFromStartTime(startOfOperation: startOfOperation)
-            print(elapsedTime)
             if elapsedTime > 2.0 {
                 completionOnMainThreadWith(message: timeoutMessage, handler: completion)
             } else {
@@ -87,41 +84,6 @@ func loadMessage(completion: @escaping (String) -> Void) {
         }
     }
     operationQueueToFetchMessages.addOperations([fetchMessageOneOperation,fetchMessageTwoOperation], waitUntilFinished: false)
- */
-    let fetchQueueForMessageOne = DispatchQueue(label: "com.fetchQueueForMessageOne")
-    let fetchQueueForMessageTwo = DispatchQueue(label: "com.fetchQueueForMessageTwo")
-    let dispatchGroup = DispatchGroup()
-    var completionIsExecuted = false
-    dispatchGroup.enter()
-    let fetchItemOne = DispatchWorkItem {
-        fetchMessageOne { (messageOne) in
-            firstMessage = messageOne
-            dispatchGroup.leave()
-        }
-    }
-    dispatchGroup.enter()
-    let fetchItemTwo = DispatchWorkItem {
-        fetchMessageTwo(completion: { (messageTwo) in
-            lastMessage = messageTwo
-            dispatchGroup.leave()
-        })
-    }
-    fetchQueueForMessageOne.async(group: dispatchGroup, execute: fetchItemOne)
-    fetchQueueForMessageTwo.async(group: dispatchGroup, execute: fetchItemTwo)
-    dispatchGroup.notify(queue: .main) {
-        if !completionIsExecuted {
-            completionIsExecuted = true
-            completion(firstMessage! + " " + lastMessage!)
-        }
-    }
-    Timer.scheduledTimer(withTimeInterval: 2, repeats: false) { (_) in
-        DispatchQueue.main.async {
-            if !completionIsExecuted {
-                completionIsExecuted = true
-                completion(timeoutMessage)
-            }
-        }
-    }
 }
 
 func elapsedTimeFromStartTime(startOfOperation:CFAbsoluteTime) -> Double {
